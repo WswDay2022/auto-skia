@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ref: [main, chrome/m150]
+        ref: [main, chrome/m150， chrome/m149, chrome/m148, chrome/m147]
 
     runs-on: windows-latest
     steps:
