@@ -1,0 +1,52 @@
+name: 从官方编译 Skia 主分支 + M150稳定分支
+
+on:
+  schedule:
+    - cron: '0 1 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    container: gcr.io/skia-public/skia-build-tools:latest
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ref: [main, chrome/m150]
+    steps:
+      - name: 拉取代码 - ${{ matrix.ref }}
+        uses: actions/checkout@v4
+        with:
+          repository: skia
+          ref: ${{ matrix.ref }}
+          submodules: false
+      - name: 同步依赖
+        run: python3 tools/git-sync-deps
+      - name: 生成构建配置
+        run: bin/gn gen out/Release --args='is_debug=false is_official_build=true'
+      - name: 编译 Skia 二进制文件
+        run: ninja -C out/Release
+      - name: 上传临时产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: skia-${{ matrix.ref }}
+          path: out/Release/
+          retention-days: 7
+      - name: 设置 Release 标签
+        id: set_tag
+        run: |
+          TAG_NAME="skia-${REF//\//-}"
+          echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
+        env:
+          REF: ${{ matrix.ref }}
+      - name: 发布 Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.set_tag.outputs.tag }}
+          name: "Built Skia ${{ matrix.ref }} ($(date +'%Y-%m-%d'))"
+          files: out/Release/
+          generate_release_notes: true
+          overwrite: true
