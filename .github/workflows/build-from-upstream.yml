@@ -22,17 +22,20 @@ jobs:
           repository: google/skia
           ref: ${{ matrix.ref }}
           submodules: false
-          
-      - name: 同步依赖
-        run: python3 tools/git-sync-deps
+
+      - name: 安装系统依赖
+        run: |
+          chmod +x tools/install_dependencies.sh
+          sudo ./tools/install_dependencies.sh
+          python3 tools/git-sync-deps
         
       - name: 生成构建配置
         run: bin/gn gen out/Release --args='is_official_build=true skia_use_system_expat=false skia_use_system_freetype2=false skia_use_system_harfbuzz=false skia_use_system_icu=false skia_use_system_libjpeg_turbo=false skia_use_system_libpng=false skia_use_system_libwebp=false skia_use_system_zlib=false'
         
-      - name: 编译 Skia 二进制文件
+      - name: 编译
         run: ninja -C out/Release
         
-      - name: 上传临时产物
+      - name: 上传临时编译产物
         uses: actions/upload-artifact@v4
         with:
           name: skia-${{ matrix.ref }}
