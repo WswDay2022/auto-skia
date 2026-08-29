@@ -90,11 +90,8 @@ jobs:
               target_os="mac"
               skia_use_metal=true
               skia_use_vulkan=false
+              skia_use_gl=false
               skia_use_direct3d=false
-              skia_use_system_freetype2=true
-              skia_use_system_libpng=true
-              skia_use_system_zlib=true
-              skia_use_system_harfbuzz=true
             )
           elif [ "$RUNNER_OS" == "Windows" ]; then
             platform_args=(
@@ -102,12 +99,7 @@ jobs:
               skia_use_direct3d=true
               skia_use_vulkan=false
               skia_use_metal=false
-              # Windows 暂不启用系统库（需 vcpkg 等额外配置），保持静态链接
-              # 若希望尝试，可取消注释并安装相应依赖
-              # skia_use_system_freetype2=true
-              # skia_use_system_libpng=true
-              # skia_use_system_zlib=true
-              # skia_use_system_harfbuzz=true
+              skia_use_gl=false
             )
           else # Linux
             platform_args=(
@@ -115,10 +107,7 @@ jobs:
               skia_use_vulkan=true
               skia_use_metal=false
               skia_use_direct3d=false
-              skia_use_system_freetype2=true
-              skia_use_system_libpng=true
-              skia_use_system_zlib=true
-              skia_use_system_harfbuzz=true
+              skia_use_gl=false
             )
           fi
           all_args=("${common_args[@]}" "${platform_args[@]}")
