@@ -1,4 +1,4 @@
-name: 从官方编译 Skia 主分支 + M150稳定分支
+name: Skia for Linux from upstream
 
 on:
   schedule:
@@ -22,23 +22,23 @@ jobs:
           repository: google/skia
           ref: ${{ matrix.ref }}
           submodules: false
-
+          
       - name: 同步依赖
         run: python3 tools/git-sync-deps
         
       - name: 生成构建配置
-        run: bin/gn gen out/Release --args='is_debug=false is_official_build=true skia_use_system_expat=false skia_use_system_harfbuzz=false skia_use_system_icu=false skia_use_system_libjpeg_turbo=false skia_use_system_libpng=false skia_use_system_libwebp=false skia_use_system_zlib=false'
-
+        run: bin/gn gen out/Release --args='is_official_build=true skia_use_system_expat=false skia_use_system_harfbuzz=false skia_use_system_icu=false skia_use_system_libjpeg_turbo=false skia_use_system_libpng=false skia_use_system_libwebp=false skia_use_system_zlib=false skia_use_system_freetype=false'
+      
       - name: 编译 Skia 二进制文件
         run: ninja -C out/Release
-
+        
       - name: 上传临时产物
         uses: actions/upload-artifact@v4
         with:
           name: skia-${{ matrix.ref }}
           path: out/Release/
           retention-days: 7
-
+          
       - name: 设置 Release 标签
         id: set_tag
         run: |
@@ -46,7 +46,7 @@ jobs:
           echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
         env:
           REF: ${{ matrix.ref }}
-
+          
       - name: 发布 Release
         uses: softprops/action-gh-release@v2
         with:
