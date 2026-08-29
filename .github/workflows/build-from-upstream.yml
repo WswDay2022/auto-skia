@@ -17,7 +17,6 @@ jobs:
         ref: [main, chrome/m150]
 
     runs-on: ${{ matrix.os }}
-
     steps:
       - name: 拉取代码 - ${{ matrix.ref }}
         uses: actions/checkout@v5
@@ -25,6 +24,21 @@ jobs:
           repository: google/skia
           ref: ${{ matrix.ref }}
           submodules: false
+         
+      - name: 安装系统依赖
+        run: |
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            vcpkg install libpng:x64-windows freetype:x64-windows harfbuzz:x64-windows zlib:x64-windows
+          else
+            chmod +x tools/install_dependencies.sh
+            ./tools/install_dependencies.sh
+          fi
+        shell: bash
+
+      - name: 设置 Windows 工具链
+        if: matrix.os == 'windows-latest'
+        run: echo "DEPOT_TOOLS_WIN_TOOLCHAIN=0" >> $GITHUB_ENV
+        shell: bash
 
       - name: 安装 depot_tools
         run: |
@@ -58,22 +72,24 @@ jobs:
             platform_args=(
               target_os='"mac"'
               skia_use_metal=true
-              # skia_use_vulkan=false
-              # skia_use_direct3d=false
+              skia_use_vulkan=false
+              skia_use_direct3d=false
             )
           elif [ "$RUNNER_OS" == "Windows" ]; then
             platform_args=(
               target_os='"win"'
               skia_use_direct3d=true
-              # skia_use_vulkan=false
-              # skia_use_metal=false
+              extra_cflags=["-IC:/vcpkg/installed/x64-windows/include"]
+              extra_ldflags=["-LC:/vcpkg/installed/x64-windows/lib"]
+              skia_use_vulkan=false
+              skia_use_metal=false
             )
           else
             platform_args=(
               target_os='"linux"'
               skia_use_vulkan=true
-              # skia_use_direct3d=false
-              # skia_use_metal=false
+              skia_use_direct3d=false
+              skia_use_metal=false
             )
           fi
 
@@ -100,7 +116,7 @@ jobs:
         shell: bash
 
       - name: 上传临时编译产物
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: skia-${{ matrix.ref }}-${{ matrix.os }}
           path: skia-*.tar.gz
