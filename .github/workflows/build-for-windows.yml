@@ -45,7 +45,7 @@ jobs:
         shell: pwsh
         
       - name: 安装系统依赖
-        run: vcpkg install libpng:x64-windows freetype:x64-windows harfbuzz:x64-windows zlib:x64-windows
+        run: vcpkg install libpng:x64-windows freetype:x64-windows harfbuzz:x64-windows zlib:x64-windows libjpeg-turbo:x64-windows
         shell: bash
 
       - name: 设置 Windows 工具链
