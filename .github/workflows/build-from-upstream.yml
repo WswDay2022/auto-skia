@@ -56,21 +56,21 @@ jobs:
 
           if [ "$RUNNER_OS" == "macOS" ]; then
             platform_args=(
-              target_os="mac"
+              target_os='\"mac\"'
               skia_use_metal=true
               # skia_use_vulkan=false
               # skia_use_direct3d=false
             )
           elif [ "$RUNNER_OS" == "Windows" ]; then
             platform_args=(
-              target_os="win"
+              target_os='\"win\"'
               skia_use_direct3d=true
               # skia_use_vulkan=false
               # skia_use_metal=false
             )
           else
             platform_args=(
-              target_os="linux"
+              target_os='\"linux\"'
               skia_use_vulkan=true
               # skia_use_direct3d=false
               # skia_use_metal=false
