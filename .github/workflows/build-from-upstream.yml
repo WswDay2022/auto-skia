@@ -25,15 +25,15 @@ jobs:
           repository: google/skia
           ref: ${{ matrix.ref }}
           submodules: false
-
+      
       - name: 安装 depot_tools
         run: |
           if [ "$RUNNER_OS" == "Windows" ]; then
             git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git C:/depot_tools
-            echo "C:/depot_tools" >> $GITHUB_PATH
+            echo "C:\depot_tools" >> $GITHUB_PATH
           else
-            git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git /opt/depot_tools
-            echo "/opt/depot_tools" >> $GITHUB_PATH
+            git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git depot_tools
+            echo "$(pwd)/depot_tools" >> $GITHUB_PATH
           fi
         shell: bash
 
