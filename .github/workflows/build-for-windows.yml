@@ -1,0 +1,116 @@
+name: Build Skia for Windows
+
+on:
+  schedule:
+    - cron: '0 1 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        ref: [main, chrome/m150]
+
+    runs-on: windows-latest
+    steps:
+      - name: 拉取代码 - ${{ matrix.ref }}
+        uses: actions/checkout@v5
+        with:
+          repository: google/skia
+          ref: ${{ matrix.ref }}
+          submodules: false
+
+      - name: 设置 vcpkg
+        run: |
+          if (Get-Command vcpkg -ErrorAction SilentlyContinue) {
+            Write-Host "vcpkg is already in PATH."
+            exit 0
+          }
+          if (Test-Path "C:/vcpkg/vcpkg.exe") {
+            Write-Host "vcpkg found at C:/vcpkg, adding to PATH"
+            echo "C:/vcpkg" >> $env:GITHUB_PATH
+            & "C:/vcpkg/bootstrap-vcpkg.bat"
+            exit 0
+          }
+          Write-Host "vcpkg not found, cloning and installing..."
+          cd C:/
+          git clone https://github.com/Microsoft/vcpkg.git
+          cd vcpkg
+          .\bootstrap-vcpkg.bat
+          echo "C:/vcpkg" >> $env:GITHUB_PATH
+        shell: pwsh
+        
+      - name: 安装系统依赖
+        run: vcpkg install libpng:x64-windows freetype:x64-windows harfbuzz:x64-windows zlib:x64-windows
+        shell: bash
+
+      - name: 设置 Windows 工具链
+        run: |
+          echo "DEPOT_TOOLS_WIN_TOOLCHAIN=0" >> $GITHUB_ENV
+          # 帮助 depot_tools 找到 MSVC（GitHub runner 默认路径）
+          VS_PATH=$(ls -d "C:/Program Files/Microsoft Visual Studio/2022/"*"/VC/Auxiliary/Build" | head -1)
+          if [ -n "$VS_PATH" ]; then
+            echo "$VS_PATH" >> $GITHUB_PATH
+          fi
+          echo "WindowsSDKVersion=10.0.22621.0" >> $GITHUB_ENV
+        shell: bash
+
+      - name: 安装 depot_tools
+        run: |
+          cd C:/
+          for i in {1..3}; do
+            git clone --depth=1 https://chromium.googlesource.com/chromium/tools/depot_tools.git && break || sleep 5
+          done
+          echo "C:/depot_tools" >> $GITHUB_PATH
+        shell: bash
+
+      - name: 同步依赖
+        run: python tools/git-sync-deps
+        shell: bash
+
+      - name: 生成构建配置
+        run: |
+          bin/gn gen out/Release --args="is_debug=false is_official_build=true target_os=\"win\" skia_use_expat=false skia_use_libwebp=false skia_use_libheif=false skia_use_piex=false skia_enable_gpu=true skia_enable_tools=false skia_enable_pdf=false skia_use_ndk_images=false skia_use_direct3d=true skia_use_vulkan=false skia_use_metal=false extra_cflags=[\"-IC:/vcpkg/installed/x64-windows/include\"] extra_ldflags=[\"-LC:/vcpkg/installed/x64-windows/lib\"]"
+        shell: bash
+
+      - name: 编译
+        run: ninja -C out/Release
+        shell: bash
+
+      - name: 打包库文件和头文件
+        run: |
+          mkdir -p skia-package
+          cp -r include skia-package/
+          cp out/Release/skia.lib skia-package/ || true
+          tar -czf skia-${{ matrix.ref }}-windows-latest.tar.gz skia-package/
+        shell: bash
+
+      - name: 上传临时编译产物
+        uses: actions/upload-artifact@v5
+        with:
+          name: skia-${{ matrix.ref }}-windows-latest
+          path: skia-*.tar.gz
+          retention-days: 7
+
+      - name: 设置 Release 标签和日期
+        id: set_tag
+        run: |
+          SAFE_REF="${REF//\//-}"
+          TAG_NAME="skia-${SAFE_REF}-windows-latest-$(date +'%Y%m%d')"
+          echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+        env:
+          REF: ${{ matrix.ref }}
+
+      - name: 发布 Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.set_tag.outputs.tag }}
+          name: "Skia ${{ matrix.ref }} (Windows) - ${{ steps.set_tag.outputs.date }}"
+          files: skia-*.tar.gz
+          generate_release_notes: true
+          overwrite: false
