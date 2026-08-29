@@ -30,7 +30,7 @@ jobs:
           python3 tools/git-sync-deps
         
       - name: 生成构建配置
-        run: bin/gn gen out/Release --args='is_debug=false is_official_build=true'
+        run: bin/gn gen out/Release --args='is_debug=false is_official_build=true skia_use_fontconfig=false'
         
       - name: 编译
         run: ninja -C out/Release
