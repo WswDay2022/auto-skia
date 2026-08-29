@@ -16,24 +16,6 @@ jobs:
       matrix:
         ref: [main, chrome/m150]
     steps:
-      - name: 安装编译环境和依赖
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            git python3 python3-pip ninja-build \
-            clang libc++-dev libc++abi-dev \
-            libgl1-mesa-dev libfontconfig1-dev libfreetype6-dev \
-            libx11-dev libxext-dev libxfixes-dev libxi-dev \
-            libxrender-dev libxcb1-dev libx11-xcb-dev libxcb-glx0-dev \
-            libxcb-keysyms1-dev libxcb-image0-dev libxcb-shm0-dev \
-            libxcb-icccm4-dev libxcb-sync-dev libxcb-xfixes0-dev \
-            libxcb-shape0-dev libxcb-randr0-dev libxcb-xkb-dev \
-            libxkbcommon-dev libxkbcommon-x11-dev \
-            libdrm-dev libgbm-dev libegl1-mesa-dev libgles2-mesa-dev \
-            libvulkan-dev libwayland-dev wayland-protocols
-          git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git /opt/depot_tools
-          echo "/opt/depot_tools" >> $GITHUB_PATH
-
       - name: 拉取代码 - ${{ matrix.ref }}
         uses: actions/checkout@v4
         with:
@@ -43,9 +25,9 @@ jobs:
 
       - name: 同步依赖
         run: python3 tools/git-sync-deps
-
+        
       - name: 生成构建配置
-        run: bin/gn gen out/Release --args='is_debug=false is_official_build=true'
+        run: bin/gn gen out/Release --args='is_debug=false is_official_build=true skia_use_system_expat=false skia_use_system_harfbuzz=false skia_use_system_icu=false skia_use_system_libjpeg_turbo=false skia_use_system_libpng=false skia_use_system_libwebp=false skia_use_system_zlib=false'
 
       - name: 编译 Skia 二进制文件
         run: ninja -C out/Release
