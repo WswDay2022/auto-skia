@@ -20,7 +20,7 @@ jobs:
 
     steps:
       - name: 拉取代码 - ${{ matrix.ref }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: google/skia
           ref: ${{ matrix.ref }}
