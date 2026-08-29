@@ -1,12 +1,4 @@
 name: Build Skia lib from upstream
-description:
-  从上游仓库编译Skia二进制库文件。
-  MacOS上使用Mental
-  Linux上使用Vulkan
-  Windows上使用Direct3D
-  移除对android移动端的支持和XML/DOM相关，禁用FontConfig，以减小最终二进制包的体积
-  使用动态链接系统库，以减小最终二进制包体积，但会降低可移植性。
-
 
 on:
   schedule:
@@ -18,11 +10,14 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
         ref: [main, chrome/m150]
+
+    runs-on: ${{ matrix.os }}
+
     steps:
       - name: 拉取代码 - ${{ matrix.ref }}
         uses: actions/checkout@v4
@@ -31,38 +26,145 @@ jobs:
           ref: ${{ matrix.ref }}
           submodules: false
 
-      - name: 安装系统依赖
+      - name: 安装 depot_tools
         run: |
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git C:/depot_tools
+            echo "C:/depot_tools" >> $GITHUB_PATH
+          else
+            git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git /opt/depot_tools
+            echo "/opt/depot_tools" >> $GITHUB_PATH
+          fi
+        shell: bash
+
+      - name: 同步依赖
+        run: |
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            python tools/git-sync-deps
+          else
+            python3 tools/git-sync-deps
+          fi
+        shell: bash
+
+      - name: 安装系统依赖（Linux）
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libfreetype-dev \
+            libpng-dev \
+            libz-dev \
+            libharfbuzz-dev
           chmod +x tools/install_dependencies.sh
           sudo ./tools/install_dependencies.sh
-          python3 tools/git-sync-deps
-        
-      - name: 生成构建配置
-        run: bin/gn gen out/Release --args='is_debug=false skia_enable_discrete_gpu=false skia_enable_pdf=false skia_enable_gpu=true skia_use_webgl=false skia_use_gl=false is_official_build=true skia_use_crabbyavif=false skia_use_libheif=false skia_use_piex=false skia_use_fontconfig=false target_os="linux" skia_use_libwebp=false skia_use_libwebp_encode=false skia_use_expat=false skia_use_vulkan=true skia_use_fontconfig=false skia_use_metal=false skia_use_direct3d=false'
-        
+        shell: bash
+
+      - name: 安装系统依赖（macOS）
+        if: matrix.os == 'macos-latest'
+        run: brew install freetype png zlib harfbuzz
+        shell: bash
+
+      - name: 生成构建配置（按平台）
+        run: |
+          # 基础通用参数
+          common_args=(
+            is_debug=false
+            is_official_build=true
+            skia_enable_discrete_gpu=false
+            skia_enable_pdf=false
+            skia_enable_gpu=true
+            skia_use_webgl=false
+            skia_use_gl=false
+            skia_use_crabbyavif=false
+            skia_use_libheif=false
+            skia_use_piex=false
+            skia_use_fontconfig=false
+            skia_use_libwebp=false
+            skia_use_libwebp_encode=false
+            skia_use_expat=false
+            skia_enable_android_utils=false
+          )
+
+          if [ "$RUNNER_OS" == "macOS" ]; then
+            platform_args=(
+              target_os="mac"
+              skia_use_metal=true
+              skia_use_vulkan=false
+              skia_use_direct3d=false
+              skia_use_system_freetype2=true
+              skia_use_system_libpng=true
+              skia_use_system_zlib=true
+              skia_use_system_harfbuzz=true
+            )
+          elif [ "$RUNNER_OS" == "Windows" ]; then
+            platform_args=(
+              target_os="win"
+              skia_use_direct3d=true
+              skia_use_vulkan=false
+              skia_use_metal=false
+              # Windows 暂不启用系统库（需 vcpkg 等额外配置），保持静态链接
+              # 若希望尝试，可取消注释并安装相应依赖
+              # skia_use_system_freetype2=true
+              # skia_use_system_libpng=true
+              # skia_use_system_zlib=true
+              # skia_use_system_harfbuzz=true
+            )
+          else # Linux
+            platform_args=(
+              target_os="linux"
+              skia_use_vulkan=true
+              skia_use_metal=false
+              skia_use_direct3d=false
+              skia_use_system_freetype2=true
+              skia_use_system_libpng=true
+              skia_use_system_zlib=true
+              skia_use_system_harfbuzz=true
+            )
+          fi
+          all_args=("${common_args[@]}" "${platform_args[@]}")
+          args_string=$(printf " %s" "${all_args[@]}")
+          args_string=${args_string:1}
+          bin/gn gen out/Release --args="$args_string"
+        shell: bash
+
       - name: 编译
         run: ninja -C out/Release
-        
+        shell: bash
+
+      - name: 打包库文件和头文件
+        run: |
+          mkdir -p skia-package
+          cp -r include skia-package/
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            cp out/Release/skia.lib skia-package/ || true
+          else
+            cp out/Release/libskia.a skia-package/ || true
+          fi
+          tar -czf skia-${{ matrix.ref }}-${{ matrix.os }}.tar.gz skia-package/
+        shell: bash
+
       - name: 上传临时编译产物
         uses: actions/upload-artifact@v4
         with:
-          name: skia-${{ matrix.ref }}
-          path: out/Release/
+          name: skia-${{ matrix.ref }}-${{ matrix.os }}
+          path: skia-*.tar.gz
           retention-days: 7
-          
-      - name: 设置 Release 标签
+
+      - name: 设置 Release 标签和日期
         id: set_tag
         run: |
-          TAG_NAME="skia-${REF//\//-}"
+          SAFE_REF="${REF//\//-}"
+          TAG_NAME="skia-${SAFE_REF}-${{ matrix.os }}"
           echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
         env:
           REF: ${{ matrix.ref }}
-          
+
       - name: 发布 Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.set_tag.outputs.tag }}
-          name: "Built Skia ${{ matrix.ref }} ($(date +'%Y-%m-%d'))"
-          files: out/Release/
+          name: "Skia ${{ matrix.ref }} (${{ matrix.os }}) - ${{ steps.set_tag.outputs.date }}"
+          files: skia-*.tar.gz
           generate_release_notes: true
-          overwrite: true
+          overwrite: false
