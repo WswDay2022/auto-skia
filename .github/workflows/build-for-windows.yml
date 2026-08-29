@@ -77,7 +77,7 @@ jobs:
 
       - name: 生成构建配置
         run: |
-          bin/gn gen out/Release --args="is_debug=false is_official_build=true target_os=\"win\" skia_use_egl=false skia_use_angle=false skia_use_opengl=false skia_use_lua=false skia_use_ffmpeg=false skia_use_mesa=false skia_use_freetype=true skia_use_harfbuzz=true skia_use_libwebp_encode=false skia_use_libwebp_decode=false skia_use_expat=false skia_use_libwebp=false skia_use_libheif=false skia_use_piex=false skia_enable_gpu=true skia_enable_tools=false skia_enable_pdf=false skia_use_ndk_images=false skia_use_direct3d=true skia_use_vulkan=false skia_use_metal=false skia_use_icu=true skia_use_sfntly=true extra_cflags=[\"-IC:/vcpkg/installed/x64-windows/include\"] extra_ldflags=[\"-LC:/vcpkg/installed/x64-windows/lib\"]"
+          bin/gn gen out/Release --args="is_debug=false is_official_build=true target_os=\"win\" skia_use_egl=false skia_use_angle=false skia_use_opengl=false skia_use_lua=false skia_use_ffmpeg=false skia_use_mesa=false skia_use_freetype=false skia_use_directwrite=true skia_use_harfbuzz=true skia_use_libwebp_encode=false skia_use_libwebp_decode=false skia_use_expat=false skia_use_libwebp=false skia_use_libheif=false skia_use_piex=false skia_enable_gpu=true skia_enable_tools=false skia_enable_pdf=false skia_use_ndk_images=false skia_use_direct3d=true skia_use_vulkan=false skia_use_metal=false skia_use_icu=true skia_use_sfntly=true extra_cflags=[\"-IC:/vcpkg/installed/x64-windows/include\"] extra_ldflags=[\"-LC:/vcpkg/installed/x64-windows/lib\"]"
         shell: bash
 
       - name: 编译
