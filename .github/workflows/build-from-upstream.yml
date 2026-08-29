@@ -37,7 +37,7 @@ jobs:
       - name: 拉取代码 - ${{ matrix.ref }}
         uses: actions/checkout@v4
         with:
-          repository: skia
+          repository: google/skia
           ref: ${{ matrix.ref }}
           submodules: false
 
