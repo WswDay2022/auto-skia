@@ -1,4 +1,4 @@
-name: 同步上游Skia仓库
+name: 同步上游Skia仓库（Clone & Push）
 
 on:
   schedule:
@@ -9,14 +9,8 @@ jobs:
   mirror:
     runs-on: ubuntu-latest
     steps:
-      - name: 完整检出仓库
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: 同步Skia仓库
+      - name: 克隆上游并推送到本仓库
         run: |
-          git config --global --add safe.directory /github/workspace
-          git remote add upstream https://github.com/google/skia.git
-          git fetch upstream --prune
-          git push origin --mirror
+          git clone --mirror https://github.com/google/skia.git skia-mirror
+          cd skia-mirror
+          git push --mirror https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
