@@ -1,4 +1,12 @@
-name: Skia for Linux from upstream
+name: Build Skia lib from upstream
+description:
+  从上游仓库编译Skia二进制库文件。
+  MacOS上使用Mental
+  Linux上使用Vulkan
+  Windows上使用Direct3D
+  移除对android移动端的支持和XML/DOM相关，禁用FontConfig，以减小最终二进制包的体积
+  使用动态链接系统库，以减小最终二进制包体积，但会降低可移植性。
+
 
 on:
   schedule:
@@ -30,7 +38,7 @@ jobs:
           python3 tools/git-sync-deps
         
       - name: 生成构建配置
-        run: bin/gn gen out/Release --args='is_debug=false is_official_build=true skia_use_fontconfig=false target_os="linux" skia_use_expat=false'
+        run: bin/gn gen out/Release --args='is_debug=false skia_enable_discrete_gpu=false skia_enable_pdf=false skia_enable_gpu=true skia_use_webgl=false skia_use_gl=false is_official_build=true skia_use_crabbyavif=false skia_use_libheif=false skia_use_piex=false skia_use_fontconfig=false target_os="linux" skia_use_libwebp=false skia_use_libwebp_encode=false skia_use_expat=false skia_use_vulkan=true skia_use_fontconfig=false skia_use_metal=false skia_use_direct3d=false'
         
       - name: 编译
         run: ninja -C out/Release
